@@ -1,4 +1,4 @@
-# 🚀 Android JNI & NDK Lab : Communication Java / C++
+#  Android JNI & NDK Lab : Communication Java / C++
 
 Ce projet est une application Android de démonstration (JNIDemo) développée pour explorer l'intégration de code natif **C++** au sein d'une application **Java** en utilisant **JNI (Java Native Interface)**, **CMake**, et le **NDK Android**.
 
@@ -6,7 +6,7 @@ L'objectif de ce laboratoire est de comprendre comment déporter des calculs ver
 
 ---
 
-## 🏗️ Architecture et Configuration (CMake & Gradle)
+##  Architecture et Configuration (CMake & Gradle)
 
 Pour que le projet Android reconnaisse et compile le C++, plusieurs étapes de configuration ont été nécessaires :
 
@@ -17,7 +17,7 @@ Pour que le projet Android reconnaisse et compile le C++, plusieurs étapes de c
 
 ---
 
-## 🛠️ Implémentation du Code Natif (`jnidemo.cpp`)
+##  Implémentation du Code Natif (`jnidemo.cpp`)
 
 Le fichier C++ contient toute la logique métier. Pour que Java puisse communiquer avec ces fonctions, j'ai dû respecter des règles JNI strictes :
 * **Signature de nommage :** Chaque fonction exportée doit s'appeler `Java_nom_du_package_NomDeLaClasse_nomDeLaMethode` (ex: `Java_com_example_jnidemo_MainActivity_factorial`).
@@ -31,7 +31,7 @@ Quatre fonctions ont été développées :
 
 ---
 
-## 📸 Déroulement du Laboratoire et Résultats
+##  Déroulement du Laboratoire et Résultats
 
 ### Étape 1 : Exécution standard (Le chemin nominal)
 La première étape consistait à vérifier que la liaison entre l'interface Java et le code natif fonctionnait avec des valeurs correctes. L'interface affiche le Hello World, le factoriel de 10, la chaîne inversée et la somme du tableau.
@@ -63,7 +63,7 @@ Au lieu de renvoyer un simple code d'erreur (`-1`) silencieux, le code C++ a ét
 
 ---
 
-## 🧠 Compétences acquises
+##  Compétences acquises
 * Interfaçage Java/C++ via JNI.
 * Configuration de builds natifs avec CMake dans Android Studio.
 * Gestion sécurisée des pointeurs et de la mémoire croisée.
