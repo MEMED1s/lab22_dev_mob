@@ -1,163 +1,71 @@
-# 📱 Android NDK Lab — JNI Integration (Java & C++)
+# 🚀 Android JNI & NDK Lab : Communication Java / C++
 
-## 🎓 Présentation
+Ce projet est une application Android de démonstration (JNIDemo) développée pour explorer l'intégration de code natif **C++** au sein d'une application **Java** en utilisant **JNI (Java Native Interface)**, **CMake**, et le **NDK Android**.
 
-Ce projet illustre l’utilisation de *JNI (Java Native Interface)* pour connecter une application Android écrite en Java avec du code natif en C++.
-
-L’objectif est de déléguer certains traitements au C++ afin d’améliorer les performances et comprendre l’architecture hybride Android.
+L'objectif de ce laboratoire est de comprendre comment déporter des calculs vers le C++ (pour des raisons de performances ou de sécurité) tout en gérant correctement la mémoire et les erreurs de part et d'autre.
 
 ---
 
-## ⚙️ Environnement technique
+## 🏗️ Architecture et Configuration (CMake & Gradle)
 
-- Android Studio
-- Java (Android SDK)
-- C++ (NDK)
-- CMake
-- Émulateur Android
+Pour que le projet Android reconnaisse et compile le C++, plusieurs étapes de configuration ont été nécessaires :
 
----
-
-## 🧩 Organisation du projet
-
-
-app/
-└── src/
-    └── main/
-        ├── java/com/example/lab22mobile/MainActivity.java
-        ├── cpp/
-        │   ├── lab22mobile.cpp
-        │   └── CMakeLists.txt
-        └── res/layout/activity_main.xml
-
+1. **Intégration Gradle :** Ajout du bloc `externalNativeBuild` dans le fichier `build.gradle` du module `app` pour indiquer le chemin vers le script CMake.
+2. **Configuration de `CMakeLists.txt` :** C'est le cœur de la compilation. J'ai configuré ce fichier pour :
+   * Créer une bibliothèque partagée (`.so`) nommée `native-lib` à partir du fichier source `jnidemo.cpp`.
+   * Rechercher et lier la bibliothèque système Android `log` pour permettre au code C++ d'écrire dans le Logcat.
 
 ---
 
-## 🔗 Communication Java ↔ C++
+## 🛠️ Implémentation du Code Natif (`jnidemo.cpp`)
 
-Le projet utilise JNI pour faire le lien entre Java et C++.
+Le fichier C++ contient toute la logique métier. Pour que Java puisse communiquer avec ces fonctions, j'ai dû respecter des règles JNI strictes :
+* **Signature de nommage :** Chaque fonction exportée doit s'appeler `Java_nom_du_package_NomDeLaClasse_nomDeLaMethode` (ex: `Java_com_example_jnidemo_MainActivity_factorial`).
+* **Gestion de la mémoire :** Les objets complexes passés par Java (comme les `String` ou les tableaux `int[]`) sont gérés par l'environnement JNI (`JNIEnv*`). Il a fallu extraire les données en C++ (ex: `GetStringUTFChars`), faire le traitement, puis **absolument libérer la mémoire** avec `ReleaseStringUTFChars` ou `ReleaseIntArrayElements` pour éviter les fuites mémoire.
 
-Exemple de déclaration côté Java :
-
-java
-public native int factorial(int n);
-
-
-La bibliothèque native est chargée avec :
-
-java
-static {
-    System.loadLibrary("lab22mobile");
-}
-
+Quatre fonctions ont été développées :
+1. `helloFromJNI` : Renvoi d'une chaîne de caractères simple.
+2. `factorial` : Calcul mathématique avec détection d'overflow (`INT_MAX`).
+3. `reverseString` : Manipulation de pointeurs pour inverser une chaîne UTF-8.
+4. `sumArray` : Parcours et calcul de la somme d'un tableau d'entiers.
 
 ---
 
-## 🧠 Fonctionnalités implémentées
+## 📸 Déroulement du Laboratoire et Résultats
 
-### 🔢 Calcul du factoriel
-- Retourne le résultat normal
-- Retourne -1 si négatif
-- Retourne -2 si overflow
+### Étape 1 : Exécution standard (Le chemin nominal)
+La première étape consistait à vérifier que la liaison entre l'interface Java et le code natif fonctionnait avec des valeurs correctes. L'interface affiche le Hello World, le factoriel de 10, la chaîne inversée et la somme du tableau.
 
-### 🔁 Inversion de chaîne
-- Inverse une chaîne
-- Gère les chaînes vides
+![pic1](https://github.com/user-attachments/assets/05c33b53-a488-4b83-8d79-5812e2ffa825)
 
-### ➕ Somme d’un tableau
-- Additionne les éléments
-- Retourne 0 si tableau vide
+*Résultat de l'exécution avec des paramètres valides.*
 
----
+### Étape 2 : Journalisation native via Logcat
+Pour vérifier que les traitements se faisaient bien côté C++, j'ai utilisé les macros `__android_log_print` dans `jnidemo.cpp`. Cela permet d'envoyer des logs `INFO` (verts) directement depuis le code natif vers la console Android Studio.
 
-## 📱 Aperçu de l'application
+![pic2](https://github.com/user-attachments/assets/d0d1a368-53f3-4480-a798-dce9decab61e)
 
-![pic1](https://github.com/user-attachments/assets/0ff66b76-a7d8-41a1-afc8-142c320924b8)
+*Traces des exécutions C++ visibles dans le Logcat avec le tag `JNI_DEMO`.*
 
+### Étape 3 : Tests de robustesse (Crash Tests)
+Pour éprouver le code, des valeurs invalides ont été envoyées depuis Java : un factoriel négatif (`-5`), une chaîne vide et un tableau vide. Le C++ intercepte ces erreurs, génère un log d'erreur `ERROR` (rouge) et renvoie un code de statut (ex: `-1`) au lieu de faire planter l'application.
 
----
+![pic3](https://github.com/user-attachments/assets/f4e9e088-35c0-4f58-95cb-d17ce2e8b05f)
 
-## 📊 Logs natifs (C++)
+*Le code C++ rejette les mauvaises données, visible via le code d'erreur sur l'écran et la ligne rouge dans le Logcat.*
 
-Les logs sont visibles dans Logcat avec le tag :
+### Étape 4 (Bonus avancé) : Levée d'exceptions Java depuis le C++
+Au lieu de renvoyer un simple code d'erreur (`-1`) silencieux, le code C++ a été modifié pour utiliser `FindClass` et `ThrowNew`. Cela permet au C++ de **lancer une véritable exception Java** (ex: `IllegalArgumentException`). Côté Java, un bloc `try...catch` intercepte cette exception et affiche le message généré par le C++. C'est l'approche recommandée en production.
 
+![pic4](https://github.com/user-attachments/assets/957c90bb-7475-46be-9661-18ea39569237)
 
-JNI_DEMO
-
-
-Exemples :
-- Appel JNI
-- Résultat du factoriel
-- String inversée
-- Somme du tableau
-
-![pic2](https://github.com/user-attachments/assets/ae8180ac-62fd-4648-b651-ccf979345213)
-
+*L'application affiche l'exception attrapée : "Le nombre doit etre positif ou nul", prouvant la parfaite synergie Java/C++.*
 
 ---
 
-## 🧪 Tests réalisés
-
-Tests effectués pour valider le comportement :
-
-- factorial(10) → 3628800
-- factorial(-5) → -1
-- factorial(20) → -2 (overflow)
-- reverseString("") → ""
-- sumArray([]) → 0
-
-Résultats dans Logcat :
-
-![pic3](https://github.com/user-attachments/assets/a6314957-4e95-4e7e-baba-b19c7ed97999)
-
-
----
-
-## 🐞 Problèmes rencontrés
-
-- Erreur de chargement de bibliothèque JNI
-- Mauvaise signature JNI
-- Erreurs de compilation C++
-- Mauvaise gestion mémoire JNI
-
----
-
-## 💡 Apprentissage
-
-Ce TP permet de comprendre :
-
-- l’interfaçage Java ↔ C++
-- l’utilisation du NDK
-- le rôle de CMake
-- le debugging avec Logcat
-
----
-
-## 🚀 Utilisation de JNI
-
-JNI est utile pour :
-
-- calcul intensif
-- traitement d’image
-- moteurs de jeu
-- bibliothèques natives
-
----
-
-## 📌 Bonnes pratiques
-
-- Minimiser les appels JNI
-- Libérer les ressources (Release...)
-- Tester les cas limites
-- Utiliser les logs intelligemment
-
----
-
-## ✅ Conclusion
-
-Ce projet montre comment intégrer efficacement du code natif dans une application Android.
-
-JNI offre de meilleures performances mais augmente la complexité. Son utilisation doit être justifiée par un besoin réel.
-
----
-
+## 🧠 Compétences acquises
+* Interfaçage Java/C++ via JNI.
+* Configuration de builds natifs avec CMake dans Android Studio.
+* Gestion sécurisée des pointeurs et de la mémoire croisée.
+* Débogage natif via Android Logcat.
+* Gestion avancée des erreurs et exceptions JNI.
